@@ -48,4 +48,25 @@ pub fn build(b: *std.Build) void {
     });
     e2e_tests.root_module.addImport("yaml", yaml_module);
     test_step.dependOn(&b.addRunArtifact(e2e_tests).step);
+
+    const compat_test_runnet = b.addExecutable(.{
+        .name = "compat_test_runnet",
+        .root_source_file = .{ .path = "compat/test_runner.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    compat_test_runnet.root_module.addImport("yaml", yaml_module);
+
+    const compat_test_runnet_opts = b.addOptions();
+    compat_test_runnet.root_module.addOptions("build_options", compat_test_runnet_opts);
+    compat_test_runnet_opts.addOption(bool, "enable_logging", enable_logging);
+
+    const run_compatibility_tests_cmd = b.addRunArtifact(compat_test_runnet);
+    run_compatibility_tests_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_compatibility_tests_cmd.addArgs(args);
+    }
+
+    const run_compatibility_tests_step = b.step("run_compatibility_tests", "Run YAML compatibility tests");
+    run_compatibility_tests_step.dependOn(&run_compatibility_tests_cmd.step);
 }
